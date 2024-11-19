@@ -44,23 +44,23 @@ RUN pip install tqdm
 # RUN pip install numpy
 # RUN pip install shapely
 
-RUN mkdir -p /models 
+# RUN mkdir -p /models 
 # ADD /models/pc-cb-3class-v2_dn21adam_best_model_100ep.bin /models/pc-cb-3class-v2_dn21adam_best_model_100ep.bin
 # ADD /models/pc-cb-3class-v2_dn21adam_best_model_100ep.xml /models/pc-cb-3class-v2_dn21adam_best_model_100ep.xml
 # RUN chmod 444 /models/pc-cb-3class-v2_dn21adam_best_model_100ep.bin
 # RUN chmod 444 /models/pc-cb-3class-v2_dn21adam_best_model_100ep.xml
 
-ADD /models/best_unet_dn21_semantic_30p-patch1024_100ep.pth /models/best_unet_dn21_semantic_30p-patch1024_100ep.pth
-RUN chmod 444 /models/best_unet_dn21_semantic_30p-patch1024_100ep.pth
+ADD best_unet_dn21_pytable_PANDA-random-30p-1024-nonorm-pt_100.pth best_unet_dn21_pytable_PANDA-random-30p-1024-nonorm-pt_100.pth
+RUN chmod 444 best_unet_dn21_pytable_PANDA-random-30p-1024-nonorm-pt_100.pth
 
 
 #ADD FILES
 RUN mkdir -p /app
 ADD descriptor.json /app/descriptor.json
-ADD run.py /app/run.py
+ADD run-largeroi-withscore-soft-vote.py /app/run-largeroi-withscore-soft-vote.py
 
 # Set environment variables for GPU support
-ENV NVIDIA_VISIBLE_DEVICES all
-ENV NVIDIA_DRIVER_CAPABILITIES compute,utility
+# ENV NVIDIA_VISIBLE_DEVICES all
+# ENV NVIDIA_DRIVER_CAPABILITIES compute,utility
 
 ENTRYPOINT ["python3", "/app/run.py"]
