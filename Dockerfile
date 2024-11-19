@@ -52,8 +52,8 @@ RUN pip install pillow
 # RUN chmod 444 /models/pc-cb-3class-v2_dn21adam_best_model_100ep.bin
 # RUN chmod 444 /models/pc-cb-3class-v2_dn21adam_best_model_100ep.xml
 
-ADD best_unet_dn21_pytable_PANDA-random-30p-1024-nonorm-pt_100.pth best_unet_dn21_pytable_PANDA-random-30p-1024-nonorm-pt_100.pth
-RUN chmod 444 best_unet_dn21_pytable_PANDA-random-30p-1024-nonorm-pt_100.pth
+ADD /models/best_unet_dn21_pytable_PANDA-random-30p-1024-nonorm-pt_100.pth /models/best_unet_dn21_pytable_PANDA-random-30p-1024-nonorm-pt_100.pth
+RUN chmod 444 /models/best_unet_dn21_pytable_PANDA-random-30p-1024-nonorm-pt_100.pth
 
 
 #ADD FILES
