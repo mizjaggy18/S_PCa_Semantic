@@ -1,0 +1,181 @@
+{
+  "name": "S_PCa_Semantic_terminal",
+  "description": "Segmentation of prostate biopsy/prostasectomy area using UNet with DenseNet21 for semantic segmentation",
+  "container-image": {
+    "image": "mizjaggy18/s_pca_semantic_terminal",
+    "type": "singularity"
+  },
+  "command-line": "echo [CYTOMINE_HOST] [CYTOMINE_PUBLIC_KEY] [CYTOMINE_PRIVATE_KEY] [CYTOMINE_ID_PROJECT] [CYTOMINE_ID_SOFTWARE] [CYTOMINE_ID_IMAGES] [CYTOMINE_ID_ROI_TERM] [CYTOMINE_ID_C1_TERM] [CYTOMINE_ID_C2_TERM] [CYTOMINE_ID_C3_TERM] [CYTOMINE_ID_C4_TERM] [CYTOMINE_ID_C5_TERM] [CYTOMINE_AREA_TH] [COLOUR_TRANSFORM] [LOG_LEVEL]",
+  "inputs": [
+    {
+      "id": "cytomine_host",
+      "value-key": "[@ID]",
+      "command-line-flag": "--@id",
+      "name": "Cytomine host",
+      "set-by-server": true,
+      "optional": false,
+      "type": "String"
+    },
+    {
+      "id": "cytomine_public_key",
+      "value-key": "[@ID]",
+      "command-line-flag": "--@id",
+      "name": "Cytomine public key",
+      "set-by-server": true,
+      "optional": false,
+      "type": "String"
+    },
+    {
+      "id": "cytomine_private_key",
+      "value-key": "[@ID]",
+      "command-line-flag": "--@id",
+      "name": "Cytomine private key",
+      "set-by-server": true,
+      "optional": false,
+      "type": "String"
+    },
+    {
+      "id": "cytomine_id_project",
+      "value-key": "[@ID]",
+      "command-line-flag": "--@id",
+      "name": "Cytomine project ID",
+      "set-by-server": true,
+      "optional": false,
+      "type": "Number"
+    },
+    {
+      "id": "cytomine_id_software",
+      "value-key": "[@ID]",
+      "command-line-flag": "--@id",
+      "name": "Cytomine software ID",
+      "set-by-server": true,
+      "optional": false,
+      "type": "Number"
+    },
+    {
+      "id": "cytomine_id_images",
+      "value-key": "[@ID]",
+      "command-line-flag": "--@id",
+      "name": "Cytomine Image IDs",
+      "description": "Images on which to classify objects",
+      "optional": false,
+      "type": "ListDomain",
+      "uri": "/api/project/$currentProject$/imageinstance.json",
+      "uri-print-attribute": "instanceFilename",
+      "uri-sort-attribute": "created"
+    },
+
+	{
+	    "id": "cytomine_id_roi_term",
+	    "value-key": "[@ID]",
+	    "command-line-flag": "--@id",
+	    "name": "Cytomine ROI term ID",
+	    "description": "Ontology term ID for ROI(s) where to detect cells",
+	    "set-by-server": false,
+	    "optional": false,
+	    "type": "Domain",
+	    "uri": "/api/ontology/$currentOntology$/term.json",
+	    "uri-print-attribute": "name",
+	    "uri-sort-attribute": "name"
+	},
+    {
+      "id": "cytomine_id_c1_term",
+      "value-key": "[@ID]",
+      "command-line-flag": "--@id",
+      "name": "Cytomine class1 (Stroma) ID",
+      "description": "Ontology term ID for area that will be classified as Class 1 (Stroma)",
+      "optional": false,
+      "type": "Domain",
+      "uri": "/api/ontology/$currentOntology$/term.json",
+      "uri-print-attribute": "name",
+      "uri-sort-attribute": "name"
+    },
+    {
+      "id": "cytomine_id_c2_term",
+      "value-key": "[@ID]",
+      "command-line-flag": "--@id",
+      "name": "Cytomine class2 (Benign) ID",
+      "description": "Ontology term ID for arae that will be classified as Class 2 (Benign)",
+      "optional": false,
+      "type": "Domain",
+      "uri": "/api/ontology/$currentOntology$/term.json",
+      "uri-print-attribute": "name",
+      "uri-sort-attribute": "name"
+    },
+
+    {
+      "id": "cytomine_id_c3_term",
+      "value-key": "[@ID]",
+      "command-line-flag": "--@id",
+      "name": "Cytomine class3 (Gleason3) ID",
+      "description": "Ontology term ID for area that will be classified as Class 3 (Gleason3)",
+      "optional": false,
+      "type": "Domain",
+      "uri": "/api/ontology/$currentOntology$/term.json",
+      "uri-print-attribute": "name",
+      "uri-sort-attribute": "name"
+    },	
+    
+    {
+      "id": "cytomine_id_c4_term",
+      "value-key": "[@ID]",
+      "command-line-flag": "--@id",
+      "name": "Cytomine class4 (Gleason4) ID",
+      "description": "Ontology term ID for area that will be classified as Class 4 (Gleaso4)",
+      "optional": false,
+      "type": "Domain",
+      "uri": "/api/ontology/$currentOntology$/term.json",
+      "uri-print-attribute": "name",
+      "uri-sort-attribute": "name"
+    },	
+    
+    {
+      "id": "cytomine_id_c5_term",
+      "value-key": "[@ID]",
+      "command-line-flag": "--@id",
+      "name": "Cytomine class5 (Gleason5) ID",
+      "description": "Ontology term ID for area that will be classified as Class 5 (Gleason5)",
+      "optional": false,
+      "type": "Domain",
+      "uri": "/api/ontology/$currentOntology$/term.json",
+      "uri-print-attribute": "name",
+      "uri-sort-attribute": "name"
+    },	
+    {
+      "id": "cytomine_area_th",
+      "value-key": "[@ID]",
+      "command-line-flag": "--@id",
+      "name": "Threshold set nucleus area (size)",
+      "description": "A typical diameter of the cancer nucleus would be 12 to 18 microns. Taking the smallest diameter and assuming an ellipse with 12 microns semi-major axis and 6 microns semi-minor axis, an area of 56.5 micron2 is obtained. It is safe to assume a complete nucleus should at least of this size.",
+      "default-value": 10,
+      "set-by-server": false,
+      "optional": false,
+      "type": "Number"
+    },    
+    {
+      "id": "colour_transform",
+      "value-key": "[@ID]",
+      "command-line-flag": "--@id",
+      "name": "Colour transform",
+      "description": "To perform colour transform (1) or not (0)",
+      "set-by-server": false,
+      "optional": false,
+      "type": "Number",
+      "default-value": 0
+    },
+    {
+      "id": "log_level",
+      "value-key": "[@ID]",
+      "command-line-flag": "--@id",
+      "default": "WARNING",
+      "name": "Logging verbosity",
+      "description": "The level is given by a value among 'DEBUG', 'INFO', 'WARNING', 'ERROR', 'CRITICAL'",
+      "set-by-server": false,
+      "optional": true,
+      "type": "String",
+      "default-value": "WARNING"
+    }
+  ],
+
+  "schema-version": "cytomine-0.1"
+}
