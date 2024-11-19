@@ -5,7 +5,7 @@
     "image": "mizjaggy18/s_pca_semantic",
     "type": "singularity"
   },
-  "command-line": "echo [CYTOMINE_HOST] [CYTOMINE_PUBLIC_KEY] [CYTOMINE_PRIVATE_KEY] [CYTOMINE_ID_PROJECT] [CYTOMINE_ID_SOFTWARE] [CYTOMINE_ID_IMAGES] [CYTOMINE_ID_ROI_TERM] [CYTOMINE_ID_C1_TERM] [CYTOMINE_ID_C2_TERM] [CYTOMINE_ID_C3_TERM] [CYTOMINE_ID_C4_TERM] [CYTOMINE_ID_C5_TERM] [CYTOMINE_AREA_TH] [COLOUR_TRANSFORM] [LOG_LEVEL]",
+  "command-line": "echo [CYTOMINE_HOST] [CYTOMINE_PUBLIC_KEY] [CYTOMINE_PRIVATE_KEY] [CYTOMINE_ID_PROJECT] [CYTOMINE_ID_SOFTWARE] [CYTOMINE_ID_IMAGES] [CYTOMINE_ID_ROI_TERM] [CYTOMINE_ID_C1_TERM] [CYTOMINE_ID_C2_TERM] [CYTOMINE_ID_C3_TERM] [CYTOMINE_ID_C4_TERM] [CYTOMINE_ID_C5_TERM] [CYTOMINE_AREA_TH] [COLOUR_TRANSFORM] [PATCH_SIZE] [OVERLAP] [LOG_LEVEL]",
   "inputs": [
     {
       "id": "cytomine_host",
@@ -84,7 +84,7 @@
       "command-line-flag": "--@id",
       "name": "Cytomine class1 (Stroma) ID",
       "description": "Ontology term ID for area that will be classified as Class 1 (Stroma)",
-      "optional": false,
+      "optional": true,
       "type": "Domain",
       "uri": "/api/ontology/$currentOntology$/term.json",
       "uri-print-attribute": "name",
@@ -96,7 +96,7 @@
       "command-line-flag": "--@id",
       "name": "Cytomine class2 (Benign) ID",
       "description": "Ontology term ID for arae that will be classified as Class 2 (Benign)",
-      "optional": false,
+      "optional": true,
       "type": "Domain",
       "uri": "/api/ontology/$currentOntology$/term.json",
       "uri-print-attribute": "name",
@@ -149,7 +149,7 @@
       "description": "A typical diameter of the cancer nucleus would be 12 to 18 microns. Taking the smallest diameter and assuming an ellipse with 12 microns semi-major axis and 6 microns semi-minor axis, an area of 56.5 micron2 is obtained. It is safe to assume a complete nucleus should at least of this size.",
       "default-value": 10,
       "set-by-server": false,
-      "optional": false,
+      "optional": true,
       "type": "Number"
     },    
     {
@@ -162,6 +162,28 @@
       "optional": false,
       "type": "Number",
       "default-value": 0
+    },    
+    {
+      "id": "patch_size",
+      "value-key": "[@ID]",
+      "command-line-flag": "--@id",
+      "name": "Patch size",
+      "description": "Patch size for prediction: 550 for TRUS, 1024 for prostatectomy",
+      "set-by-server": false,
+      "optional": false,
+      "type": "Number",
+      "default-value": 1024
+    },    
+    {
+      "id": "overlap",
+      "value-key": "[@ID]",
+      "command-line-flag": "--@id",
+      "name": "Patch overlap value",
+      "description": "Percentage of patch overlap",
+      "set-by-server": false,
+      "optional": false,
+      "type": "Number",
+      "default-value": 0.5
     },
     {
       "id": "log_level",
