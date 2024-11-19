@@ -154,9 +154,13 @@ def run(cyto_job, parameters):
     job = cyto_job.job
     user = job.userJob
     project = cyto_job.project
-    th_area = parameters.cytomine_area_th
+    # th_area = parameters.cytomine_area_th
     num_classes = 6
     colour_transform = parameters.colour_transform
+    patch_size = parameters.patch_size
+    overlap = parameters.overlap
+    
+    
 
     terms = TermCollection().fetch_with_filter("project", parameters.cytomine_id_project)
     job.update(status=Job.RUNNING, progress=1, statusComment="Terms collected...")
@@ -252,8 +256,6 @@ def run(cyto_job, parameters):
                     print(annotation)
     
                     # Parameters
-                    patch_size = 550
-                    overlap = 0.5
                     step = int(patch_size * (1 - overlap))  # 50% overlap
                     num_patches_x = (roi_width + step - 1) // step
                     num_patches_y = (roi_height + step - 1) // step
