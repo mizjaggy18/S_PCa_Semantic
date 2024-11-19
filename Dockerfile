@@ -41,8 +41,10 @@ RUN pip install openvino-telemetry==2023.2.1
 RUN pip install opencv-python-headless==4.5.1.48
 RUN pip install opencv-contrib-python-headless==4.5.1.48
 RUN pip install tqdm
-# RUN pip install numpy
-# RUN pip install shapely
+RUN pip install scipy
+RUN pip install scikit-image
+RUN pip install pillow
+
 
 # RUN mkdir -p /models 
 # ADD /models/pc-cb-3class-v2_dn21adam_best_model_100ep.bin /models/pc-cb-3class-v2_dn21adam_best_model_100ep.bin
