@@ -65,4 +65,4 @@ ADD run-largeroi-withscore-soft-vote.py /app/run-largeroi-withscore-soft-vote.py
 # ENV NVIDIA_VISIBLE_DEVICES all
 # ENV NVIDIA_DRIVER_CAPABILITIES compute,utility
 
-ENTRYPOINT ["python3", "/app/run.py"]
+ENTRYPOINT ["python3", "/app/run-largeroi-withscore-soft-vote.py"]
