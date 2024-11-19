@@ -14,15 +14,6 @@
 # * See the License for the specific language governing permissions and
 # * limitations under the License.
 
-# python3.10 run-largeroi.py --cytomine_host "http://cytomine.imu.edu.my" --cytomine_public_key "71981a88-4e97-4551-a403-59d0dfccf5fd" --cytomine_private_key "36344b44-7539-4772-b1fb-d9ae7ec72182" --cytomine_id_project "40497659" --cytomine_id_software "56993430" --cytomine_id_images "49722168" --cytomine_id_roi_term "79227463" --cytomine_id_c1_term "53908090" --cytomine_id_c2_term "53906941" --cytomine_id_c3_term "53906846" --cytomine_id_c4_term "53906891" --cytomine_id_c5_term "53906909" --cytomine_area_th "0" --log_level "WARNING"
-
-
-# python3.10 run-largeroi-gaussian.py --cytomine_host "http://cytomine.imu.edu.my" --cytomine_public_key "71981a88-4e97-4551-a403-59d0dfccf5fd" --cytomine_private_key "36344b44-7539-4772-b1fb-d9ae7ec72182" --cytomine_id_project "1355" --cytomine_id_software "56993430" --cytomine_id_images "81465396" --cytomine_id_roi_term "3785" --cytomine_id_c1_term "81467065" --cytomine_id_c2_term "81467079" --cytomine_id_c3_term "81467109" --cytomine_id_c4_term "81467129" --cytomine_id_c5_term "81467145" --cytomine_area_th "0" --log_level "WARNING"
-
-# python3.10 run-largeroi-withscore-soft-vote.py --cytomine_host "http://cytomine.imu.edu.my" --cytomine_public_key "71981a88-4e97-4551-a403-59d0dfccf5fd" --cytomine_private_key "36344b44-7539-4772-b1fb-d9ae7ec72182" --cytomine_id_project "1355" --cytomine_id_software "56993430" --cytomine_id_images "81465396" --cytomine_id_roi_term "3785" --cytomine_id_c1_term "81467065" --cytomine_id_c2_term "81467079" --cytomine_id_c3_term "81467109" --cytomine_id_c4_term "81467129" --cytomine_id_c5_term "81467145" --cytomine_area_th "0" --colour_transform "0" --log_level "WARNING"
-
-# python3.10 run-largeroi-withscore-soft-vote.py --cytomine_host "http://cytomine.imu.edu.my" --cytomine_public_key "71981a88-4e97-4551-a403-59d0dfccf5fd" --cytomine_private_key "36344b44-7539-4772-b1fb-d9ae7ec72182" --cytomine_id_project "1355" --cytomine_id_software "56993430" --cytomine_id_images "83527613" --cytomine_id_roi_term "3785" --cytomine_id_c1_term "81467065" --cytomine_id_c2_term "81467079" --cytomine_id_c3_term "81467109" --cytomine_id_c4_term "81467129" --cytomine_id_c5_term "81467145" --cytomine_area_th "0" --colour_transform "1" --log_level "WARNING"
-
 from __future__ import print_function, unicode_literals, absolute_import, division
 import sys
 import numpy as np
@@ -173,10 +164,7 @@ def run(cyto_job, parameters):
 
     start_time=time.time()
 
-    # modelpath="./models/best_unet_dn21_norm_semantic_30p-patch1024_7ep.pth"
-    # modelpath="./models/best_unet_dn21_semantic_30p-patch1024_100ep.pth"
-    # modelpath="./models/best_unet_dn21_pytable_color_semantic_30p-patch1024_100ep.pth"
-    modelpath="./models/best_unet_dn21_pytable_PANDA-random-30p-1024-nonorm-pt_100.pth" ##### ***** #####
+    modelpath="/models/best_unet_dn21_pytable_PANDA-random-30p-1024-nonorm-pt_100.pth" ##### ***** #####
     
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     print(device)
@@ -245,175 +233,176 @@ def run(cyto_job, parameters):
             #for roi in conn.monitor(roi_annotations, prefix="Running detection on ROI", period=0.1):
             for roi in roi_annotations:
                 job.update(status=Job.RUNNING, progress=50, statusComment=f'Running prediction on image: {id_image}, ROI: {roi.id}')
-                # try:                
-                # print(".", sep=' ', end='', flush=True)
-                roi_geometry = wkt.loads(roi.location)
-                # print("ROI Geometry from Shapely: {}".format(roi_geometry))
-                min_x=roi_geometry.bounds[0]
-                min_y=roi_geometry.bounds[1]
-                max_x=roi_geometry.bounds[2]
-                max_y=roi_geometry.bounds[3]
-                roi_width=round(max_x - min_x)
-                roi_height=round(max_y - min_y)
-                print("ROI width = ", roi_width, "; ROI height = ", roi_height)
+                try:                
+                    # print(".", sep=' ', end='', flush=True)
+                    roi_geometry = wkt.loads(roi.location)
+                    # print("ROI Geometry from Shapely: {}".format(roi_geometry))
+                    min_x=roi_geometry.bounds[0]
+                    min_y=roi_geometry.bounds[1]
+                    max_x=roi_geometry.bounds[2]
+                    max_y=roi_geometry.bounds[3]
+                    roi_width=round(max_x - min_x)
+                    roi_height=round(max_y - min_y)
+                    print("ROI width = ", roi_width, "; ROI height = ", roi_height)
+    
+                    annotation = Annotation().fetch(roi.id)
+                    # x, y, width, height = annotation.bbox() 
+                    image_instance = ImageInstance().fetch(id_image)
+                    print(image_instance)
+                    print(annotation)
+    
+                    # Parameters
+                    patch_size = 550
+                    overlap = 0.5
+                    step = int(patch_size * (1 - overlap))  # 50% overlap
+                    num_patches_x = (roi_width + step - 1) // step
+                    num_patches_y = (roi_height + step - 1) // step
+                    print(f'Patch X: {num_patches_x}, Patch Y: {num_patches_y}')
+                    print(f'Step X: {step}, Step Y: {step}')
+         
+                    num_classes = 6
+                    # Assume `num_classes` is the total number of segmentation classes
+                    segmentation_result = np.zeros((roi_height, roi_width, num_classes), dtype=np.float32)
+                    overlap_count = np.zeros((roi_height, roi_width), dtype=np.float32)  # For tracking overlap per pixel
+                    class_counts = np.zeros((roi_height, roi_width, num_classes), dtype=np.int32)
+    
+    
+                    # Loop through patches with adjustments for the last patches
+                    for i in range(0, roi_height - patch_size + 1, step):
+                        for j in range(0, roi_width - patch_size + 1, step):                        
+                            # Adjust i and j for the last patch in each direction to fit within ROI boundaries
+                            if i + patch_size > roi_height:
+                                i = roi_height - patch_size
+                            if j + patch_size > roi_width:
+                                j = roi_width - patch_size
+                            # Calculate the coordinates in the whole-slide image (WSI) system
+                            patch_x = int(min_x) + j
+                            patch_y = int(wsi_height - max_y) + i
+    
+                            # image_id = id_image
+                            x, y, w, h = patch_x, patch_y, patch_size, patch_size
+                            response = cyto_job.get_instance()._get(
+                                "{}/{}/window-{}-{}-{}-{}.{}".format("imageinstance", id_image, x, y, w, h, "png"),{"maxSize": 256})
+                            
+                            if response.status_code in [200, 304] and response.headers['Content-Type'] == 'image/png':
+                                roi_im = Image.open(BytesIO(response.content))
+                                gray_im = roi_im.convert("L")
+                                min_pixel, max_pixel = gray_im.getextrema()
+                                if min_pixel == 255 and max_pixel == 255:
+                                    continue               
+    
+                            if roi_im.mode == 'RGBA':
+                                roi_im = roi_im.convert("RGB")
+    
+                            if colour_transform == 1:
+                                import torchvision.transforms.functional as Ft
+                                saturation_factor = 0.50  # Equivalent to -15% saturation
+                                hue_factor = 0.07  # Fixed hue adjustment
+                                transformed_img = Ft.adjust_saturation(roi_im, saturation_factor)
+                                transformed_img = Ft.adjust_hue(transformed_img, hue_factor)
+                            else:
+                                transformed_img=roi_im
+    
+                            # Preprocessing: assuming the image is a PIL image, apply necessary transformations
+                            transform = transforms.Compose([
+                                transforms.Resize((256, 256)),  # Resize to the input size expected by the model
+                                transforms.ToTensor(),          # Convert the image to a PyTorch tensor
+                            ])
+    
+                            # Transform the input image and add a batch dimension                        
+                            image_tensor = transform(transformed_img).unsqueeze(0).to(device)  # Add batch dimension [1, C, H, W]
+                            # Forward pass
+                            with torch.no_grad():
+                                segmented_patch = model(image_tensor)  # Model output shape [1, num_classes, height, width]
+                                seg_preds = torch.argmax(segmented_patch, dim=1).cpu().numpy()[0]  # Shape: [patch_size, patch_size]
+    
+    
+                            # # Convert model predictions to class probabilities and resize
+                            # Resize the predictions for alignment with patch size
+                            seg_preds_resized = resize(
+                                seg_preds, (patch_size, patch_size), order=0, preserve_range=True, anti_aliasing=True
+                            ).astype(np.int32)  # Ensure integer class labels after resizing
+    
+    
+                            # Accumulate class counts for each pixel in the ROI
+                            for c in range(num_classes):
+                                # Create a binary mask for where the class `c` was predicted
+                                class_mask = (seg_preds_resized == c).astype(np.int32)
+                                # Increment counts at each pixel location for the predicted class
+                                class_counts[i:i + patch_size, j:j + patch_size, c] += class_mask
+    
+                    # Final segmentation by selecting the class with the highest count (majority vote) at each pixel
+                    final_segmentation = np.uint8(np.argmax(class_counts, axis=-1))  # Shape: [roi_height, roi_width]
+                    final_segmentation = median_filter(final_segmentation, size=3)
+                    print(np.max(final_segmentation))
+                    print(final_segmentation.shape)
+    
+                    # Zoom factor for WSI
+                    bit_depth = 8 #imageinfo.bitDepth if imageinfo.bitDepth is not None else 8
+                    zoom_factor = 1
+                    transform_matrix = [zoom_factor, 0, 0, -zoom_factor, min_x, max_y]
+                    min_area = int((0.0001 / 100) * wsi_width * wsi_height)
+                    # print(min_area)
+                    cytomine_annotations = AnnotationCollection()
+    
+                    job.update(status=Job.RUNNING, progress=50, statusComment="Uploading annotations...")
+    
+                    # Assuming that each class is represented as polygons in the segmentation output
+                    for class_idx in np.unique(final_segmentation):
+                        if class_idx==0:
+                            continue  # Skip background class
+                        elif class_idx==1:
+                            # print("Class 1: Stroma")
+                            # id_terms=parameters.cytomine_id_c1_term
+                            continue
+                        elif class_idx==2:
+                            # print("Class 2: Benign")
+                            # id_terms=parameters.cytomine_id_c2_term
+                            continue
+                        elif class_idx==3:
+                            # print("Class 3: Gleason3")
+                            id_terms=parameters.cytomine_id_c3_term
+                        elif class_idx==4:
+                            # print("Class 4: Gleason4")
+                            id_terms=parameters.cytomine_id_c4_term
+                        elif class_idx==5:
+                            # print("Class 5: Gleason5")
+                            id_terms=parameters.cytomine_id_c5_term
+    
+                        # Initialize the class in the dictionary if not already present
+                        if class_idx not in class_polygons:
+                            class_polygons[class_idx] = {
+                                "polygons": [],
+                                "id_terms": id_terms
+                            }
+    
+                        # Create a binary mask for the current class
+                        # class_mask = seg_preds_resized == class_idx
+                        class_mask = final_segmentation == class_idx
+                        fg_objects = mask_to_objects_2d(class_mask)
+                        buffer_distance = 50.0
+    
+                        # # Collect polygons for each class
+                        for i, (fg_poly, _) in enumerate(fg_objects):
+                            upscaled = affine_transform(fg_poly, transform_matrix)
+                            if upscaled.area >= min_area:
+                                outer_boundary = Polygon(upscaled.exterior)
+                                # class_polygons[class_idx]["polygons"].append(outer_boundary)
+                                smoothed_polygon = outer_boundary.buffer(buffer_distance).buffer(-buffer_distance)                            
+                                class_polygons[class_idx]["polygons"].append(smoothed_polygon)
+                                upscaled = smoothed_polygon
+                                # Annotation(
+                                # location=upscaled.wkt,
+                                # id_image=id_image,
+                                # id_terms=[id_terms],
+                                # id_project=project.id
+                                # ).save()
 
-                annotation = Annotation().fetch(roi.id)
-                # x, y, width, height = annotation.bbox() 
-                image_instance = ImageInstance().fetch(id_image)
-                print(image_instance)
-                print(annotation)
-
-                # Parameters
-                patch_size = 550
-                overlap = 0.5
-                step = int(patch_size * (1 - overlap))  # 50% overlap
-                num_patches_x = (roi_width + step - 1) // step
-                num_patches_y = (roi_height + step - 1) // step
-                print(f'Patch X: {num_patches_x}, Patch Y: {num_patches_y}')
-                print(f'Step X: {step}, Step Y: {step}')
-     
-                num_classes = 6
-                # Assume `num_classes` is the total number of segmentation classes
-                segmentation_result = np.zeros((roi_height, roi_width, num_classes), dtype=np.float32)
-                overlap_count = np.zeros((roi_height, roi_width), dtype=np.float32)  # For tracking overlap per pixel
-                class_counts = np.zeros((roi_height, roi_width, num_classes), dtype=np.int32)
-
-
-                # Loop through patches with adjustments for the last patches
-                for i in range(0, roi_height - patch_size + 1, step):
-                    for j in range(0, roi_width - patch_size + 1, step):                        
-                        # Adjust i and j for the last patch in each direction to fit within ROI boundaries
-                        if i + patch_size > roi_height:
-                            i = roi_height - patch_size
-                        if j + patch_size > roi_width:
-                            j = roi_width - patch_size
-                        # Calculate the coordinates in the whole-slide image (WSI) system
-                        patch_x = int(min_x) + j
-                        patch_y = int(wsi_height - max_y) + i
-
-                        # image_id = id_image
-                        x, y, w, h = patch_x, patch_y, patch_size, patch_size
-                        response = cyto_job.get_instance()._get(
-                            "{}/{}/window-{}-{}-{}-{}.{}".format("imageinstance", id_image, x, y, w, h, "png"),{"maxSize": 256})
-                        
-                        if response.status_code in [200, 304] and response.headers['Content-Type'] == 'image/png':
-                            roi_im = Image.open(BytesIO(response.content))
-                            gray_im = roi_im.convert("L")
-                            min_pixel, max_pixel = gray_im.getextrema()
-                            if min_pixel == 255 and max_pixel == 255:
-                                continue               
-
-                        if roi_im.mode == 'RGBA':
-                            roi_im = roi_im.convert("RGB")
-
-                        if colour_transform == 1:
-                            import torchvision.transforms.functional as Ft
-                            saturation_factor = 0.50  # Equivalent to -15% saturation
-                            hue_factor = 0.07  # Fixed hue adjustment
-                            transformed_img = Ft.adjust_saturation(roi_im, saturation_factor)
-                            transformed_img = Ft.adjust_hue(transformed_img, hue_factor)
-                        else:
-                            transformed_img=roi_im
-
-                        # Preprocessing: assuming the image is a PIL image, apply necessary transformations
-                        transform = transforms.Compose([
-                            transforms.Resize((256, 256)),  # Resize to the input size expected by the model
-                            transforms.ToTensor(),          # Convert the image to a PyTorch tensor
-                        ])
-
-                        # Transform the input image and add a batch dimension                        
-                        image_tensor = transform(transformed_img).unsqueeze(0).to(device)  # Add batch dimension [1, C, H, W]
-                        # Forward pass
-                        with torch.no_grad():
-                            segmented_patch = model(image_tensor)  # Model output shape [1, num_classes, height, width]
-                            seg_preds = torch.argmax(segmented_patch, dim=1).cpu().numpy()[0]  # Shape: [patch_size, patch_size]
-
-
-                        # # Convert model predictions to class probabilities and resize
-                        # Resize the predictions for alignment with patch size
-                        seg_preds_resized = resize(
-                            seg_preds, (patch_size, patch_size), order=0, preserve_range=True, anti_aliasing=True
-                        ).astype(np.int32)  # Ensure integer class labels after resizing
-
-
-                        # Accumulate class counts for each pixel in the ROI
-                        for c in range(num_classes):
-                            # Create a binary mask for where the class `c` was predicted
-                            class_mask = (seg_preds_resized == c).astype(np.int32)
-                            # Increment counts at each pixel location for the predicted class
-                            class_counts[i:i + patch_size, j:j + patch_size, c] += class_mask
-
-                # Final segmentation by selecting the class with the highest count (majority vote) at each pixel
-                final_segmentation = np.uint8(np.argmax(class_counts, axis=-1))  # Shape: [roi_height, roi_width]
-                final_segmentation = median_filter(final_segmentation, size=3)
-                print(np.max(final_segmentation))
-                print(final_segmentation.shape)
-
-                # Zoom factor for WSI
-                bit_depth = 8 #imageinfo.bitDepth if imageinfo.bitDepth is not None else 8
-                zoom_factor = 1
-                transform_matrix = [zoom_factor, 0, 0, -zoom_factor, min_x, max_y]
-                min_area = int((0.0001 / 100) * wsi_width * wsi_height)
-                # print(min_area)
-                cytomine_annotations = AnnotationCollection()
-
-                job.update(status=Job.RUNNING, progress=50, statusComment="Uploading annotations...")
-
-                # Assuming that each class is represented as polygons in the segmentation output
-                for class_idx in np.unique(final_segmentation):
-                    if class_idx==0:
-                        continue  # Skip background class
-                    elif class_idx==1:
-                        # print("Class 1: Stroma")
-                        # id_terms=parameters.cytomine_id_c1_term
-                        continue
-                    elif class_idx==2:
-                        # print("Class 2: Benign")
-                        # id_terms=parameters.cytomine_id_c2_term
-                        continue
-                    elif class_idx==3:
-                        # print("Class 3: Gleason3")
-                        id_terms=parameters.cytomine_id_c3_term
-                    elif class_idx==4:
-                        # print("Class 4: Gleason4")
-                        id_terms=parameters.cytomine_id_c4_term
-                    elif class_idx==5:
-                        # print("Class 5: Gleason5")
-                        id_terms=parameters.cytomine_id_c5_term
-
-                    # Initialize the class in the dictionary if not already present
-                    if class_idx not in class_polygons:
-                        class_polygons[class_idx] = {
-                            "polygons": [],
-                            "id_terms": id_terms
-                        }
-
-                    # Create a binary mask for the current class
-                    # class_mask = seg_preds_resized == class_idx
-                    class_mask = final_segmentation == class_idx
-                    fg_objects = mask_to_objects_2d(class_mask)
-                    buffer_distance = 50.0
-
-                    # # Collect polygons for each class
-                    for i, (fg_poly, _) in enumerate(fg_objects):
-                        upscaled = affine_transform(fg_poly, transform_matrix)
-                        if upscaled.area >= min_area:
-                            outer_boundary = Polygon(upscaled.exterior)
-                            # class_polygons[class_idx]["polygons"].append(outer_boundary)
-                            smoothed_polygon = outer_boundary.buffer(buffer_distance).buffer(-buffer_distance)                            
-                            class_polygons[class_idx]["polygons"].append(smoothed_polygon)
-                            upscaled = smoothed_polygon
-                            # Annotation(
-                            # location=upscaled.wkt,
-                            # id_image=id_image,
-                            # id_terms=[id_terms],
-                            # id_project=project.id
-                            # ).save()
-
-                # except:
-                # # finally:
-                #     # print("end")
-                #     print("An exception occurred. Proceed with next annotations")
+                except:
+                # finally:
+                    # print("end")
+                    print("An exception occurred. Proceed with next annotations")
+                    
             class_areas = {}
 
             
