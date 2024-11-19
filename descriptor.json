@@ -1,8 +1,8 @@
 {
-  "name": "S_PCa_Semantic_terminal",
+  "name": "S_PCa_Semantic",
   "description": "Segmentation of prostate biopsy/prostasectomy area using UNet with DenseNet21 for semantic segmentation",
   "container-image": {
-    "image": "mizjaggy18/s_pca_semantic_terminal",
+    "image": "mizjaggy18/s_pca_semantic",
     "type": "singularity"
   },
   "command-line": "echo [CYTOMINE_HOST] [CYTOMINE_PUBLIC_KEY] [CYTOMINE_PRIVATE_KEY] [CYTOMINE_ID_PROJECT] [CYTOMINE_ID_SOFTWARE] [CYTOMINE_ID_IMAGES] [CYTOMINE_ID_ROI_TERM] [CYTOMINE_ID_C1_TERM] [CYTOMINE_ID_C2_TERM] [CYTOMINE_ID_C3_TERM] [CYTOMINE_ID_C4_TERM] [CYTOMINE_ID_C5_TERM] [CYTOMINE_AREA_TH] [COLOUR_TRANSFORM] [LOG_LEVEL]",
