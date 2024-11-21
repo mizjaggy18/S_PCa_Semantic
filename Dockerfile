@@ -44,6 +44,7 @@ RUN pip install tqdm
 RUN pip install scipy
 RUN pip install scikit-image
 RUN pip install pillow
+RUN pip install sldc
 
 
 # RUN mkdir -p /models 
