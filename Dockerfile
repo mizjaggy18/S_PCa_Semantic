@@ -61,9 +61,10 @@ RUN chmod 444 /models/best_unet_dn21_pytable_PANDA-random-30p-1024-nonorm-pt_100
 RUN mkdir -p /app
 ADD descriptor.json /app/descriptor.json
 ADD run-largeroi-withscore-soft-vote.py /app/run-largeroi-withscore-soft-vote.py
+ADD run-largeroi-withscore-gaussian.py /app/run-largeroi-withscore-gaussian.py
 
 # Set environment variables for GPU support
 # ENV NVIDIA_VISIBLE_DEVICES all
 # ENV NVIDIA_DRIVER_CAPABILITIES compute,utility
 
-ENTRYPOINT ["python3", "/app/run-largeroi-withscore-soft-vote.py"]
+ENTRYPOINT ["python3", "/app/run-largeroi-withscore-gaussian.py"]
