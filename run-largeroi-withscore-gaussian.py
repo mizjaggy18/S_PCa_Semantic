@@ -1,8 +1,18 @@
+# -*- coding: utf-8 -*-
 
-# python3.10 run-largeroi-withscore-gaussian.py --cytomine_host "http://cytomine.imu.edu.my" --cytomine_public_key "71981a88-4e97-4551-a403-59d0dfccf5fd" --cytomine_private_key "36344b44-7539-4772-b1fb-d9ae7ec72182" --cytomine_id_project "1355" --cytomine_id_software "56993430" --cytomine_id_images "81465396" --cytomine_id_roi_term "3785" --cytomine_id_c1_term "81467065" --cytomine_id_c2_term "81467079" --cytomine_id_c3_term "81467109" --cytomine_id_c4_term "81467129" --cytomine_id_c5_term "81467145" --cytomine_area_th "0" --colour_transform "0" --patch_size "1024" --overlap "0.5" --log_level "WARNING"
-
-# python3.10 run-largeroi-withscore-gaussian.py --cytomine_host "http://cytomine.imu.edu.my" --cytomine_public_key "71981a88-4e97-4551-a403-59d0dfccf5fd" --cytomine_private_key "36344b44-7539-4772-b1fb-d9ae7ec72182" --cytomine_id_project "1355" --cytomine_id_software "56993430" --cytomine_id_images "83527613" --cytomine_id_roi_term "3785" --cytomine_id_c1_term "81467065" --cytomine_id_c2_term "81467079" --cytomine_id_c3_term "81467109" --cytomine_id_c4_term "81467129" --cytomine_id_c5_term "81467145" --cytomine_area_th "0" --colour_transform "0" --patch_size "1024" --overlap "0.5" --log_level "WARNING"
-
+# * Copyright (c) 2009-2018. Authors: see NOTICE file.
+# *
+# * Licensed under the Apache License, Version 2.0 (the "License");
+# * you may not use this file except in compliance with the License.
+# * You may obtain a copy of the License at
+# *
+# *      http://www.apache.org/licenses/LICENSE-2.0
+# *
+# * Unless required by applicable law or agreed to in writing, software
+# * distributed under the License is distributed on an "AS IS" BASIS,
+# * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# * See the License for the specific language governing permissions and
+# * limitations under the License.
 
 from __future__ import print_function, unicode_literals, absolute_import, division
 import sys
@@ -142,18 +152,19 @@ def run(cyto_job, parameters):
     project = cyto_job.project
     th_area = parameters.cytomine_area_th
     num_classes = 6
+    maxsize = parameters.maxsize
+    patch_size = parameters.patch_size
+    input_size = parameters.input_size
+    overlap = parameters.overlap
 
     terms = TermCollection().fetch_with_filter("project", parameters.cytomine_id_project)
     job.update(status=Job.RUNNING, progress=1, statusComment="Terms collected...")
     print(terms)
 
     start_time=time.time()
-
-    # modelpath="./models/best_unet_dn21_norm_semantic_30p-patch1024_7ep.pth"
-    # modelpath="./models/best_unet_dn21_semantic_30p-patch1024_100ep.pth"
-    # modelpath="./models/best_unet_dn21_pytable_color_semantic_30p-patch1024_100ep.pth"
+    
     # modelpath="./models/best_unet_dn21_pytable_PANDA-random-30p-1024-nonorm-pt_100.pth" ##### ***** #####
-    modelpath="./models/best_unet_dn21_pytable_PANDA-random-30p-1024-coloraug-pt_100.pth" ##### ***** #####
+    modelpath="/models/best_unet_dn21_pytable_PANDA-random-30p-1024-coloraug-pt_100.pth" ##### ***** #####
     
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     print(device)
@@ -241,10 +252,10 @@ def run(cyto_job, parameters):
                 print(annotation)
 
                 # Parameters
-                patch_size = 1000
-                input_size = 128
-                maxsize = 256
-                overlap = 0.5
+                # patch_size = 1000
+                # input_size = 128
+                # maxsize = 256
+                # overlap = 0.5
                 print(f"patch size: {patch_size}, input_size: {input_size}, maxsize: {maxsize}, overlap: {overlap}")
                 step = int(patch_size * (1 - overlap))  # 50% overlap
                 num_patches_x = (roi_width + step - 1) // step
