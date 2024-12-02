@@ -164,7 +164,7 @@ def run(cyto_job, parameters):
     start_time=time.time()
     
     # modelpath="./models/best_unet_dn21_pytable_PANDA-random-30p-1024-nonorm-pt_100.pth" ##### ***** #####
-    modelpath="/models/best_unet_dn21_pytable_PANDA-random-30p-multitile-coloraug-pt_100.pth" ##### ***** #####
+    modelpath="/models/best_unet_dn21_pytable_PANDA-random-30p-multitiles-coloraug-pt_100.pth" ##### ***** #####
     
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     print(device)
