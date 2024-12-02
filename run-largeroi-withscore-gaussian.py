@@ -164,7 +164,7 @@ def run(cyto_job, parameters):
     start_time=time.time()
     
     # modelpath="./models/best_unet_dn21_pytable_PANDA-random-30p-1024-nonorm-pt_100.pth" ##### ***** #####
-    modelpath="/models/best_unet_dn21_pytable_PANDA-random-30p-1024-coloraug-pt_100.pth" ##### ***** #####
+    modelpath="/models/best_unet_dn21_pytable_PANDA-random-30p-multitile-coloraug-pt_100.pth" ##### ***** #####
     
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     print(device)
@@ -270,8 +270,8 @@ def run(cyto_job, parameters):
 
                 is_algo = User().fetch(roi.user).algo   
 
-                for i in range(0, roi_height - patch_size + 1, step):
-                    for j in range(0, roi_width - patch_size + 1, step):
+                for i in range(0, roi_height, step):
+                    for j in range(0, roi_width, step):
                         if i + patch_size > roi_height:
                             i = roi_height - patch_size
                         if j + patch_size > roi_width:
