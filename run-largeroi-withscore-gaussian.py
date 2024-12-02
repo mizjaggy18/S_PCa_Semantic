@@ -265,8 +265,8 @@ def run(cyto_job, parameters):
      
                 num_classes = 6
                 segmentation_result = np.zeros((roi_height, roi_width, num_classes), dtype=np.float32)
-                overlap_count = np.zeros((roi_height, roi_width), dtype=np.float32)  # For tracking overlap per pixel
-                weight_matrix = create_weight_matrix(patch_size)
+                # overlap_count = np.zeros((roi_height, roi_width), dtype=np.float32)  # For tracking overlap per pixel
+                # weight_matrix = create_weight_matrix(patch_size)
 
                 is_algo = User().fetch(roi.user).algo   
 
@@ -322,7 +322,7 @@ def run(cyto_job, parameters):
                         # Apply weighted averaging for each class
                         for c in range(num_classes):
                             # Apply weight matrix to the class probability map
-                            weighted_class_map = seg_probs_resized[c] * weight_matrix
+                            weighted_class_map = seg_probs_resized[c] * 1 #weight_matrix
                             # Update segmentation result with weighted probabilities
                             segmentation_result[i:i + patch_size, j:j + patch_size, c] += weighted_class_map
 
@@ -380,7 +380,7 @@ def run(cyto_job, parameters):
                     # class_mask = seg_preds_resized == class_idx
                     class_mask = final_segmentation == class_idx
                     fg_objects = mask_to_objects_2d(class_mask)
-                    buffer_distance = 1.0
+                    # buffer_distance = 1.0
 
                     # # Collect polygons for each class
                     for i, (fg_poly, _) in enumerate(fg_objects):
@@ -388,8 +388,8 @@ def run(cyto_job, parameters):
                         if upscaled.area >= min_area:
                             outer_boundary = Polygon(upscaled.exterior)
                             # class_polygons[class_idx]["polygons"].append(outer_boundary)
-                            smoothed_polygon = outer_boundary.buffer(buffer_distance).buffer(-buffer_distance)                            
-                            class_polygons[class_idx]["polygons"].append(smoothed_polygon)
+                            # smoothed_polygon = outer_boundary.buffer(buffer_distance).buffer(-buffer_distance)                            
+                            class_polygons[class_idx]["polygons"].append(outer_boundary)
                             # upscaled = smoothed_polygon
                 # except:
                 # # finally:
