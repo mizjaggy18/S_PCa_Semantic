@@ -73,12 +73,6 @@ from torchvision.models import DenseNet
 from torchvision import transforms
 from scipy.ndimage import gaussian_filter
 
-def create_weight_matrix(patch_size, sigma=3):
-    center_matrix = np.ones((patch_size, patch_size), dtype=np.float32)
-    weight_matrix = gaussian_filter(center_matrix, sigma=patch_size * sigma)
-    weight_matrix /= weight_matrix.max()
-    return weight_matrix
-
 class UNetWithDenseNetEncoder(nn.Module):
     def __init__(self, in_channels=3, out_channels=6):
         super(UNetWithDenseNetEncoder, self).__init__()
@@ -154,6 +148,8 @@ def run(cyto_job, parameters):
     num_classes = 6
     maxsize = parameters.maxsize
     patch_size = parameters.patch_size
+    patch_width = patch_size
+    patch_height = patch_size
     input_size = parameters.input_size
     overlap = parameters.overlap
 
@@ -164,7 +160,7 @@ def run(cyto_job, parameters):
     start_time=time.time()
     
     # modelpath="./models/best_unet_dn21_pytable_PANDA-random-30p-1024-nonorm-pt_100.pth" ##### ***** #####
-    modelpath="/models/best_unet_dn21_pytable_PANDA-random-30p-multitiles-coloraug-pt_100.pth" ##### ***** #####
+    modelpath="/models/best_unet_dn21_pytable_PANDA-random-30p-multitiles-coloraug-pt_47ep.pth" ##### ***** #####
     
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     print(device)
@@ -268,7 +264,7 @@ def run(cyto_job, parameters):
                 # overlap_count = np.zeros((roi_height, roi_width), dtype=np.float32)  # For tracking overlap per pixel
                 # weight_matrix = create_weight_matrix(patch_size)
 
-                is_algo = User().fetch(roi.user).algo   
+                # is_algo = User().fetch(roi.user).algo   
 
                 for i in range(0, roi_height, step):
                     for j in range(0, roi_width, step):
@@ -276,10 +272,20 @@ def run(cyto_job, parameters):
                             i = roi_height - patch_size
                         if j + patch_size > roi_width:
                             j = roi_width - patch_size
+                        if roi_width < patch_size:
+                            j=0
+                            patch_width = roi_width
+                        if roi_height < patch_size:
+                            i=0
+                            patch_height = roi_height
+
+                        patch_height = patch_size if roi_height >= patch_size else roi_height
+                        patch_width = patch_size if roi_width >= patch_size else roi_width
+                        
                         patch_x = int(min_x) + j
                         patch_y = int(wsi_height - max_y) + i
 
-                        x, y, w, h = patch_x, patch_y, patch_size, patch_size
+                        x, y, w, h = patch_x, patch_y, patch_width, patch_height
                         # response = cyto_job.get_instance()._get(
                         #     "{}/{}/window-{}-{}-{}-{}.{}".format("imageinstance", id_image, x, y, w, h, "png"),{})
                         response = cyto_job.get_instance()._get(
@@ -307,32 +313,12 @@ def run(cyto_job, parameters):
 
                         # Convert model predictions to class probabilities and resize
                         seg_probs = torch.softmax(segmented_patch, dim=1).cpu().numpy()
-                                                
-                        # seg_pred = np.argmax(seg_probs, axis=1)  # Shape: [patch_size, patch_size], values between 0 and num_classes-1
+                        seg_probs_resized = [resize(seg_probs[0, c], (patch_height, patch_width), order=1, preserve_range=True, anti_aliasing=True) for c in range(num_classes)]
 
-                        # # Calculate the majority class in the patch
-                        # unique, counts = np.unique(seg_pred, return_counts=True)  # Get unique class values and their counts
-                        # majority_class = unique[np.argmax(counts)]  # Find the class with the maximum count
-
-                        # # Create a new mask where all pixels are assigned the majority class
-                        # seg_pred_majority = np.full_like(seg_pred, majority_class, dtype=np.int32)  # Set all pixels to the majority class
-
-                        seg_probs_resized = [resize(seg_probs[0, c], (patch_size, patch_size), order=1, preserve_range=True, anti_aliasing=True) for c in range(num_classes)]
-
-                        # Apply weighted averaging for each class
                         for c in range(num_classes):
-                            # Apply weight matrix to the class probability map
-                            weighted_class_map = seg_probs_resized[c] * 1 #weight_matrix
-                            # Update segmentation result with weighted probabilities
-                            segmentation_result[i:i + patch_size, j:j + patch_size, c] += weighted_class_map
-
-                #         # Update overlap count with weights
-                #         overlap_count[i:i + patch_size, j:j + patch_size] += weight_matrix
-
-                # # Average overlapping areas with weighted counts
-                # segmentation_result /= np.maximum(overlap_count[..., np.newaxis], 1)
-
-                # Select the class with the highest average probability for each pixel
+                            weighted_class_map = seg_probs_resized[c] * 1 
+                            segmentation_result[i:i + patch_height, j:j + patch_width, c] += weighted_class_map
+                            
                 final_segmentation = np.uint8(np.argmax(segmentation_result, axis=-1))
 
                 print(np.max(final_segmentation))
