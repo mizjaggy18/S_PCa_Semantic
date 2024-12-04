@@ -56,8 +56,8 @@ RUN pip install sldc
 # ADD /models/best_unet_dn21_pytable_PANDA-random-30p-1024-coloraug-pt_100.pth /models/best_unet_dn21_pytable_PANDA-random-30p-1024-coloraug-pt_100.pth
 # RUN chmod 444 /models/best_unet_dn21_pytable_PANDA-random-30p-1024-coloraug-pt_100.pth
 
-ADD /models/best_unet_dn21_pytable_PANDA-random-30p-multitiles-coloraug-pt_100.pth /models/best_unet_dn21_pytable_PANDA-random-30p-multitiles-coloraug-pt_100.pth
-RUN chmod 444 /models/best_unet_dn21_pytable_PANDA-random-30p-multitiles-coloraug-pt_100.pth
+ADD /models/best_unet_dn21_pytable_PANDA-random-30p-multitiles-coloraug-pt_47ep.pth /models/best_unet_dn21_pytable_PANDA-random-30p-multitiles-coloraug-pt_47ep.pth
+RUN chmod 444 /models/best_unet_dn21_pytable_PANDA-random-30p-multitiles-coloraug-pt_47ep.pth
 
 
 #ADD FILES
