@@ -72,6 +72,49 @@ import torch.nn.functional as F
 from torchvision.models import DenseNet
 from torchvision import transforms
 from scipy.ndimage import gaussian_filter
+from skimage.filters import threshold_otsu
+
+def generate_grade_group(gleason_score):
+    """
+    Map the Gleason score to its corresponding Grade Group.
+    """
+    # Mapping Gleason scores to Grade Groups
+    grade_group_mapping = {
+        "3+3": 1,
+        "3+4": 2,
+        "4+3": 3,
+        "4+4": 4,
+        "4+5": 5,
+        "5+4": 5,
+        "5+5": 5
+    }
+    
+    # Check if the score is in the mapping
+    if gleason_score in grade_group_mapping:
+        return f"Grade Group {grade_group_mapping[gleason_score]}"
+    else:
+        # Handle Gleason scores not explicitly listed
+        score_sum = sum(map(int, gleason_score.split('+')))
+        if score_sum >= 9:
+            return "Grade Group 5"
+        return "Unknown Grade Group"
+
+def generate_gleason_score(class_percentages):
+    gleason_classes = {idx: class_percentages.get(idx, 0) for idx in [3, 4, 5]}
+
+    for class_idx, percentage in gleason_classes.items():
+        if percentage == 100 and all(gleason_classes[other] == 0 for other in gleason_classes if other != class_idx):
+            return f"{class_idx}+{class_idx}"
+    
+    sorted_classes = sorted(gleason_classes.items(), key=lambda x: x[1], reverse=True)
+    gleason_5_priority = gleason_classes[5] >= 5
+    if gleason_5_priority:
+        highest_class = sorted_classes[0][0]
+        gleason_score = f"{highest_class}+5" if highest_class != 5 else "5+5"
+    else:
+        gleason_score = f"{sorted_classes[0][0]}+{sorted_classes[1][0]}"
+    return gleason_score
+
 
 class UNetWithDenseNetEncoder(nn.Module):
     def __init__(self, in_channels=3, out_channels=6):
@@ -188,6 +231,11 @@ def run(cyto_job, parameters):
     print('Print list images:', list_imgs2)
     job.update(status=Job.RUNNING, progress=30, statusComment="Images gathered...")
 
+    max_image_size = 1000
+    threshold_allowance = 10
+    kernel_size = 3
+    image_area_perc_threshold = 0.001
+
     #Set working path
     working_path = os.path.join("tmp", str(job.id))
    
@@ -197,7 +245,7 @@ def run(cyto_job, parameters):
     try:
 
         id_project=project.id   
-        output_path = os.path.join(working_path, "classification_results.csv")
+        output_path = os.path.join(working_path, "prostate_gleason_results.csv")
         f= open(output_path,"w+")
 
         f.write("AnnotationID;ImageID;ProjectID;JobID;TermID;UserID;Area;Perimeter;Hue;Value;WKT \n")
@@ -211,6 +259,92 @@ def run(cyto_job, parameters):
             calibration_factor=imageinfo.resolution
             wsi_width=imageinfo.width
             wsi_height=imageinfo.height
+
+            resize_ratio = max(wsi_width, wsi_height) / max_image_size
+            if resize_ratio < 1:
+                resize_ratio = 1
+
+            resized_width = int(wsi_width / resize_ratio)
+            resized_height = int(wsi_height / resize_ratio)
+            dim = (resized_width, resized_height)  
+            bit_depth = 8
+            
+
+            response = cyto_job.get_instance()._get(
+                "{}/{}/window-{}-{}-{}-{}.{}".format("imageinstance", id_image, 0, 0, wsi_width, wsi_height, "png"), {"maxSize":max_image_size}
+            )
+
+            if response.status_code in [200, 304] and response.headers['Content-Type'] == 'image/png':
+                image_bytes = BytesIO(response.content)
+                image_array = np.asarray(bytearray(image_bytes.read()), dtype=np.uint8)
+                im = cv2.imdecode(image_array, cv2.IMREAD_GRAYSCALE)
+                im_resized = cv2.resize(im, dim, interpolation = cv2.INTER_AREA)
+                pixels = np.array(im_resized).flatten()
+                th_value = threshold_otsu(pixels)
+                print("Otsu threshold: ", th_value)
+                threshold = th_value + threshold_allowance
+                print("Otsu threshold + allowance: ", threshold)
+                thresh_mask = (im < threshold).astype(np.uint8)*255
+                
+                kernel_size = np.array(kernel_size)
+                if kernel_size.size != 2:  
+                    kernel_size = kernel_size.repeat(2)
+                kernel_size = tuple(np.round(kernel_size).astype(int))
+                
+                # Create structuring element for morphological operations
+                kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, kernel_size)
+                min_region_size = np.sum(kernel)
+                _, output, stats, _ = cv2.connectedComponentsWithStats(thresh_mask, connectivity=8)
+                sizes = stats[1:, -1]
+                for i, size in enumerate(sizes):
+                    if size < min_region_size:
+                        thresh_mask[output == i + 1] = 0
+
+                thresh_mask = cv2.morphologyEx(thresh_mask, cv2.MORPH_OPEN, kernel)
+                thresh_mask = cv2.bitwise_not(thresh_mask)            
+
+                extension = 10
+                extended_img = cv2.copyMakeBorder(
+                    thresh_mask,
+                    extension,
+                    extension,
+                    extension,
+                    extension,
+                    cv2.BORDER_CONSTANT,
+                    value=255  # Use the same as the background value
+                )
+
+                h, w = thresh_mask.shape
+                edges = np.zeros_like(thresh_mask)
+                edges[0, :] = edges[-1, :] = edges[:, 0] = edges[:, -1] = 1
+                
+                mask_edges = cv2.bitwise_and(thresh_mask, edges)
+                thresh_mask[mask_edges > 0] = 0
+
+                # extract foreground polygons 
+                fg_objects = mask_to_objects_2d(extended_img, background=255, offset=(-extension, -extension))
+                zoom_factor = wsi_width / float(resized_width)
+
+                # Only keep components greater than {image_area_perc_threshold}% of whole image
+                min_area = int((image_area_perc_threshold / 100) * wsi_width * wsi_height)
+                total_tissue_area = 0
+                transform_matrix = [zoom_factor, 0, 0, -zoom_factor, 0, wsi_height]
+                annotations = AnnotationCollection()
+                for i, (fg_poly, _) in enumerate(fg_objects):                    
+                    upscaled = affine_transform(fg_poly, transform_matrix)
+                    total_tissue_area += upscaled.area
+                    if upscaled.area <= min_area:
+                        continue
+                    # print(upscaled.area)
+                    try:
+                        print("Mask area: ", upscaled.area)                            
+                        # Annotation(
+                        # location=upscaled.wkt,
+                        # id_image=id_image,
+                        # id_terms=[predictroi_term],
+                        # id_project=cytomine_id_project).save()                    
+                    except:
+                        print("An exception occurred. Proceed with next annotations")
             
             #term for large ROI
             roi_annotations = AnnotationCollection(
@@ -422,25 +556,57 @@ def run(cyto_job, parameters):
 
             # Calculate the percentage area for each class
             class_percentages = {class_idx: (area / total_area_all_classes) * 100 for class_idx, area in class_areas.items()}
+            class_names = {3: "Gleason 3", 4: "Gleason 4", 5: "Gleason 5"}
 
-            # Print or process the results as needed
-            print("Total area for each class:", class_areas)
-            print("Percentage area for each class:", class_percentages)
+            print("Tissue volume:", total_tissue_area)
+            print("Tumor area:",total_area_all_classes)
+            tumor_volume_ratio=total_area_all_classes/total_tissue_area
+            print("Tumor volume (tumor/tissue ratio):",tumor_volume_ratio)
+            # print("Total area for each pattern:", class_areas)
+            # print("Percentage area for each pattern:", class_percentages)
 
+            print("Total area (percentage) for each pattern:")
+            for class_idx, area in class_areas.items():
+                percentage = class_percentages.get(class_idx, 0)  # Get the percentage, default to 0
+                class_name = class_names.get(class_idx, f"Class {class_idx}")  # Get the class name
+                print(f"{class_name}: {area:.1f} ({percentage:.2f}%)")
+
+            gleason_score = generate_gleason_score(class_percentages)
+            print("Gleason Score:", gleason_score)
+            grade_group = generate_grade_group(gleason_score)
+            print("Grade Group:", grade_group)
+            
             end_prediction_time=time.time()
                   
             end_time=time.time()
             print("Execution time: ",end_time-start_time)
-            # print("Prediction time: ",end_prediction_time-start_prediction_time)
 
             f.write("\n")
-            f.write("Image ID;Class Prediction;Class 0 (Others);Class 1 (Necrotic);Class 2 (Tumor);Total Prediction;Execution Time;Prediction Time\n")
-            # f.write("{};{};{};{};{};{};{};{}\n".format(id_image,im_pred,pred_c0,pred_c1,pred_c2,pred_total,end_time-start_time,end_prediction_time-start_prediction_time))
+            gleason_3_area = class_areas.get(3, 0.0)
+            gleason_3_percent = class_percentages.get(3, 0.0)
+            gleason_4_area = class_areas.get(4, 0.0)
+            gleason_4_percent = class_percentages.get(4, 0.0)
+            gleason_5_area = class_areas.get(5, 0.0)
+            gleason_5_percent = class_percentages.get(5, 0.0)
             
+            # Write the data
+            f.write("{};{:.2f};{:.2f};{:.8f};{:.2f} ({:.2f}%);{:.2f} ({:.2f}%);{:.2f} ({:.2f}%);{};{};{:.2f}\n".format(
+                id_image,
+                total_tissue_area,
+                total_area_all_classes,
+                tumor_volume_ratio,
+                gleason_3_area, gleason_3_percent,
+                gleason_4_area, gleason_4_percent,
+                gleason_5_area, gleason_5_percent,
+                gleason_score,
+                grade_group,
+                end_time-start_time
+            ))
+                    
         f.close()
         
         job.update(status=Job.RUNNING, progress=99, statusComment="Summarizing results...")
-        job_data = JobData(job.id, "Generated File", "classification_results.csv").save()
+        job_data = JobData(job.id, "Generated File", "prostate_gleason_results.csv").save()
         job_data.upload(output_path)
 
     finally:
